@@ -59,3 +59,23 @@ test('request throws DevshotApiError with parsed API payload', async () => {
     },
   );
 });
+
+test('requestApi returns status and body without throwing on API errors', async () => {
+  const client = createDevshotClient({
+    apiKey: 'ds_test',
+    baseUrl: 'https://console.devshot.com',
+    fetchImpl: async () =>
+      new Response(JSON.stringify({ error: 'Not found' }), {
+        status: 404,
+        statusText: 'Not Found',
+        headers: { 'content-type': 'application/json' },
+      }),
+  });
+
+  const result = await client.requestApi('/api/workspaces/missing');
+
+  assert.deepEqual(result, {
+    status: 404,
+    body: { error: 'Not found' },
+  });
+});

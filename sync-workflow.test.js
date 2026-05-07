@@ -5,7 +5,9 @@ import path from 'node:path';
 
 const workflowPath = path.resolve(import.meta.dirname, '../../.github/workflows/sync-mcp.yml');
 
-test('CI sync workflow pushes the MCP package to the standalone repository', () => {
+test('CI sync workflow pushes the MCP package to the standalone repository', {
+  skip: fs.existsSync(workflowPath) ? false : 'monorepo workflow is not present in the standalone package',
+}, () => {
   const workflow = fs.readFileSync(workflowPath, 'utf8');
 
   assert.match(workflow, /git@github\.com:devshotcom\/devshot-mcp\.git/);
@@ -13,6 +15,7 @@ test('CI sync workflow pushes the MCP package to the standalone repository', () 
   assert.doesNotMatch(workflow, /branches: \[main\]/);
   assert.match(workflow, /Verify release tag points to main/);
   assert.match(workflow, /SOURCE_COMMIT="\$\(git rev-parse HEAD\)"/);
+  assert.match(workflow, /node scripts\/generate-mcp-api-catalog\.mjs/);
   assert.match(workflow, /npm test --workspace @devshot\/mcp-server/);
   assert.match(workflow, /DEPLOY_TOKEN/);
   assert.doesNotMatch(workflow, /DEPLOY_KEY/);

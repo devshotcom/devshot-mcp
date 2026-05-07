@@ -15,7 +15,10 @@ function makeServer() {
 
 test('registerDevshotTools exposes the expected DevShot MCP tools', () => {
   const server = makeServer();
-  const client = { request: async () => ({ ok: true }) };
+  const client = {
+    request: async () => ({ ok: true }),
+    requestApi: async () => ({ status: 200, body: { ok: true } }),
+  };
 
   registerDevshotTools(server, client);
 
@@ -24,7 +27,10 @@ test('registerDevshotTools exposes the expected DevShot MCP tools', () => {
 
 test('createDevshotMcpServer instantiates the real MCP server with the registered tools', () => {
   const server = createDevshotMcpServer({
-    client: { request: async () => ({ ok: true }) },
+    client: {
+      request: async () => ({ ok: true }),
+      requestApi: async () => ({ status: 200, body: { ok: true } }),
+    },
   });
 
   assert.ok(server);
@@ -101,6 +107,64 @@ test('exec_vm maps command execution onto the VM exec API route', async () => {
       body: { command: 'uname -s' },
     },
   }]);
+});
+
+test('list_api_endpoints returns the generated DevShot API catalog', async () => {
+  const server = makeServer();
+  const client = {
+    async request() {
+      return { ok: true };
+    },
+    async requestApi() {
+      return { status: 200, body: { ok: true } };
+    },
+  };
+
+  registerDevshotTools(server, client);
+  const result = await server.tools.get('list_api_endpoints').handler({});
+
+  assert.equal(result.isError, undefined);
+  assert.ok(Array.isArray(result.structuredContent.endpoints));
+  assert.ok(result.structuredContent.endpoints.length > 80);
+  assert.ok(result.structuredContent.endpoints.some((endpoint) =>
+    endpoint.path === '/api/servers/[id]/pool/base-image'
+      && endpoint.methods.includes('POST')));
+  assert.ok(result.structuredContent.endpoints.some((endpoint) =>
+    endpoint.path === '/api/workspaces/[id]/chat/[threadId]/send'
+      && endpoint.methods.includes('POST')));
+});
+
+test('api_call maps arbitrary /api requests onto the generic API client', async () => {
+  const server = makeServer();
+  const calls = [];
+  const client = {
+    async request() {
+      return { ok: true };
+    },
+    async requestApi(path, init) {
+      calls.push({ path, init });
+      return { status: 201, body: { id: 'workspace-1' } };
+    },
+  };
+
+  registerDevshotTools(server, client);
+  const result = await server.tools.get('api_call').handler({
+    method: 'POST',
+    path: '/api/workspaces',
+    body: { name: 'Launch' },
+  });
+
+  assert.deepEqual(calls, [{
+    path: '/api/workspaces',
+    init: {
+      method: 'POST',
+      body: { name: 'Launch' },
+    },
+  }]);
+  assert.deepEqual(result.structuredContent, {
+    status: 201,
+    body: { id: 'workspace-1' },
+  });
 });
 
 test('DevShot API failures are returned as MCP tool errors', async () => {
