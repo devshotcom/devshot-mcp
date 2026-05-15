@@ -236,6 +236,80 @@ test('desktop_screenshot calls the action route with action=screenshot', async (
   assert.equal(result.structuredContent.screenshotBase64, 'aGVsbG8=');
 });
 
+test('android_use maps a typed action onto /api/vms/:vm/android/action (spec 057)', async () => {
+  const server = makeServer();
+  const calls = [];
+  const client = {
+    async request(path, init) {
+      calls.push({ path, init });
+      return { ok: true, screenshotBase64: 'YWJj' };
+    },
+  };
+
+  registerDevshotTools(server, client);
+  await server.tools.get('android_use').handler({
+    vm: 'pool-deadbeef',
+    action: 'left_click',
+    coordinate: [540, 960],
+  });
+
+  assert.deepEqual(calls, [{
+    path: '/api/vms/pool-deadbeef/android/action',
+    init: {
+      method: 'POST',
+      body: { action: 'left_click', coordinate: [540, 960] },
+    },
+  }]);
+});
+
+test('android_use exposes the android-only back/home/recents helpers', async () => {
+  const server = makeServer();
+  const calls = [];
+  const client = {
+    async request(path, init) {
+      calls.push({ path, init });
+      return { ok: true };
+    },
+  };
+
+  registerDevshotTools(server, client);
+  await server.tools.get('android_use').handler({
+    vm: 'pool-deadbeef',
+    action: 'home',
+  });
+  await server.tools.get('android_use').handler({
+    vm: 'pool-deadbeef',
+    action: 'back',
+  });
+
+  assert.deepEqual(calls.map((c) => c.init.body), [
+    { action: 'home' },
+    { action: 'back' },
+  ]);
+});
+
+test('android_screenshot calls the action route with action=screenshot', async () => {
+  const server = makeServer();
+  const calls = [];
+  const client = {
+    async request(path, init) {
+      calls.push({ path, init });
+      return { ok: true, screenshotBase64: 'YWJj' };
+    },
+  };
+
+  registerDevshotTools(server, client);
+  const result = await server.tools.get('android_screenshot').handler({
+    vm: 'pool-deadbeef',
+  });
+
+  assert.deepEqual(calls, [{
+    path: '/api/vms/pool-deadbeef/android/action',
+    init: { method: 'POST', body: { action: 'screenshot' } },
+  }]);
+  assert.equal(result.structuredContent.screenshotBase64, 'YWJj');
+});
+
 test('DevShot API failures are returned as MCP tool errors', async () => {
   const server = makeServer();
   const client = {
