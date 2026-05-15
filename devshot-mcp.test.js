@@ -310,6 +310,91 @@ test('android_screenshot calls the action route with action=screenshot', async (
   assert.equal(result.structuredContent.screenshotBase64, 'YWJj');
 });
 
+test('terminal_use routes a run action through /api/vms/:vm/terminal/action (spec 058)', async () => {
+  const server = makeServer();
+  const calls = [];
+  const client = {
+    async request(path, init) {
+      calls.push({ path, init });
+      return { ok: true, paneCapture: 'fake-scrollback' };
+    },
+  };
+
+  registerDevshotTools(server, client);
+  await server.tools.get('terminal_use').handler({
+    vm: 'pool-deadbeef',
+    action: 'run',
+    text: 'ls -la',
+    session_id: 'ai-1',
+  });
+
+  assert.deepEqual(calls, [{
+    path: '/api/vms/pool-deadbeef/terminal/action',
+    init: {
+      method: 'POST',
+      body: { action: 'run', text: 'ls -la', session_id: 'ai-1' },
+    },
+  }]);
+});
+
+test('browser_use navigate routes through /api/vms/:vm/browser/action (spec 058)', async () => {
+  const server = makeServer();
+  const calls = [];
+  const client = {
+    async request(path, init) {
+      calls.push({ path, init });
+      return { ok: true, screenshotBase64: 'QUJD' };
+    },
+  };
+
+  registerDevshotTools(server, client);
+  await server.tools.get('browser_use').handler({
+    vm: 'pool-deadbeef',
+    action: 'navigate',
+    url: 'https://example.com',
+  });
+
+  assert.deepEqual(calls, [{
+    path: '/api/vms/pool-deadbeef/browser/action',
+    init: { method: 'POST', body: { action: 'navigate', url: 'https://example.com' } },
+  }]);
+});
+
+test('application_use proxies a typed HTTP request (spec 058)', async () => {
+  const server = makeServer();
+  const calls = [];
+  const client = {
+    async request(path, init) {
+      calls.push({ path, init });
+      return { ok: true, status: 200, headers: {}, body: '{"ok":true}' };
+    },
+  };
+
+  registerDevshotTools(server, client);
+  await server.tools.get('application_use').handler({
+    vm: 'pool-deadbeef',
+    action: 'request',
+    port: 8080,
+    method: 'POST',
+    path: '/api/echo',
+    body: { hello: 'world' },
+  });
+
+  assert.deepEqual(calls, [{
+    path: '/api/vms/pool-deadbeef/application/action',
+    init: {
+      method: 'POST',
+      body: {
+        action: 'request',
+        port: 8080,
+        method: 'POST',
+        path: '/api/echo',
+        body: { hello: 'world' },
+      },
+    },
+  }]);
+});
+
 test('DevShot API failures are returned as MCP tool errors', async () => {
   const server = makeServer();
   const client = {
