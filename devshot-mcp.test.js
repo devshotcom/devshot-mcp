@@ -167,6 +167,75 @@ test('api_call maps arbitrary /api requests onto the generic API client', async 
   });
 });
 
+test('computer_use maps a typed action onto /api/vms/:vm/desktop/action', async () => {
+  const server = makeServer();
+  const calls = [];
+  const client = {
+    async request(path, init) {
+      calls.push({ path, init });
+      return { ok: true, screenshotBase64: 'aGVsbG8=' };
+    },
+  };
+
+  registerDevshotTools(server, client);
+  await server.tools.get('computer_use').handler({
+    vm: 'pool-deadbeef',
+    action: 'left_click',
+    coordinate: [100, 200],
+  });
+
+  assert.deepEqual(calls, [{
+    path: '/api/vms/pool-deadbeef/desktop/action',
+    init: {
+      method: 'POST',
+      body: { action: 'left_click', coordinate: [100, 200] },
+    },
+  }]);
+});
+
+test('computer_use drops undefined fields from the request body', async () => {
+  const server = makeServer();
+  const calls = [];
+  const client = {
+    async request(path, init) {
+      calls.push({ path, init });
+      return { ok: true };
+    },
+  };
+
+  registerDevshotTools(server, client);
+  await server.tools.get('computer_use').handler({
+    vm: 'pool-deadbeef',
+    action: 'type',
+    text: 'hello',
+  });
+
+  // Only `action` and `text` should appear; no coordinate/duration/etc.
+  assert.deepEqual(calls[0].init.body, { action: 'type', text: 'hello' });
+});
+
+test('desktop_screenshot calls the action route with action=screenshot', async () => {
+  const server = makeServer();
+  const calls = [];
+  const client = {
+    async request(path, init) {
+      calls.push({ path, init });
+      return { ok: true, screenshotBase64: 'aGVsbG8=' };
+    },
+  };
+
+  registerDevshotTools(server, client);
+  const result = await server.tools.get('desktop_screenshot').handler({
+    vm: 'pool-deadbeef',
+  });
+
+  assert.deepEqual(calls, [{
+    path: '/api/vms/pool-deadbeef/desktop/action',
+    init: { method: 'POST', body: { action: 'screenshot' } },
+  }]);
+  assert.equal(result.structuredContent.screenshotBase64, 'aGVsbG8=');
+});
+
 test('DevShot API failures are returned as MCP tool errors', async () => {
   const server = makeServer();
   const client = {
