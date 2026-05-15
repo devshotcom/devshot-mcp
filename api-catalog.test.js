@@ -13,6 +13,10 @@ test('generated API catalog covers the current release API surface', () => {
     ['DELETE', 'GET', 'POST'],
   );
   assert.deepEqual(
+    DEVSHOT_API_ENDPOINTS.find((endpoint) => endpoint.path === '/api/servers/[id]/vms/[name]/expose')?.methods,
+    ['GET', 'PUT'],
+  );
+  assert.deepEqual(
     DEVSHOT_API_ENDPOINTS.find((endpoint) => endpoint.path === '/api/workspaces/[id]/chat/[threadId]/send')?.methods,
     ['POST'],
   );
