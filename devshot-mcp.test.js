@@ -129,9 +129,8 @@ test('list_api_endpoints returns the generated DevShot API catalog', async () =>
   assert.ok(result.structuredContent.endpoints.some((endpoint) =>
     endpoint.path === '/api/servers/[id]/pool/base-image'
       && endpoint.methods.includes('POST')));
-  assert.ok(result.structuredContent.endpoints.some((endpoint) =>
-    endpoint.path === '/api/workspaces/[id]/chat/[threadId]/send'
-      && endpoint.methods.includes('POST')));
+  // /api/workspaces/[id]/chat/[threadId]/send removed in 2240cbc (workspace
+  // chat feature deletion) — assertion dropped to match the live catalog.
 });
 
 test('api_call maps arbitrary /api requests onto the generic API client', async () => {
