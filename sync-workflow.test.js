@@ -11,7 +11,7 @@ test('CI sync workflow pushes the MCP package to the standalone repository', {
   const workflow = fs.readFileSync(workflowPath, 'utf8');
 
   assert.match(workflow, /git@github\.com:devshotcom\/devshot-mcp\.git/);
-  assert.match(workflow, /tags:\n\s+- 'v\*'/);
+  assert.match(workflow, /tags:\n\s+- 'v\*'\n\s+- 'backend-v\*'/);
   assert.doesNotMatch(workflow, /branches: \[main\]/);
   assert.match(workflow, /Verify release tag points to main/);
   assert.match(workflow, /SOURCE_COMMIT="\$\(git rev-parse HEAD\)"/);
