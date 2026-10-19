@@ -21,7 +21,8 @@ claude mcp add --transport http devshot https://console.devshot.com/api/mcp --he
 
 This stdio server also accepts a project key in `DEVSHOT_API_KEY` and then
 exposes the same project tools: `project_status`, `start_vm`, `exec`,
-`read_file`, `write_file`.
+`read_file`, `write_file`, `set_internet` (owner keys only) and
+`command_reference`.
 
 ## Configuration
 
