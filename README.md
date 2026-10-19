@@ -6,11 +6,12 @@ Standalone repository: https://github.com/devshotcom/devshot-mcp
 
 ## Connect one Studio project (recommended)
 
-A project key (`dsp_...`) opens exactly one DevShot Studio project. Create it in
-Studio under Share → Connect an AI client; it is shown once. Its tools take no VM
-name: DevShot resolves the project's current VM on every call, starts one when
-none runs (using a session pass), and never reaches other projects, other VMs or
-account settings.
+A project key (`dsp_...`) opens exactly one DevShot Studio project for the
+current Studio session. Studio fills it into Share → Connect an AI client; it
+stops working when that session ends. Its tools take no VM name: DevShot
+resolves the project's current VM on every call, starts it again within the
+session if it stopped, and never reaches other projects, other VMs or account
+settings.
 
 No local install is needed — the console hosts the MCP endpoint:
 
