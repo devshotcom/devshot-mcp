@@ -4,9 +4,27 @@ This package exposes the existing DevShot HTTP API as a local stdio MCP server s
 
 Standalone repository: https://github.com/devshotcom/devshot-mcp
 
+## Connect one Studio project (recommended)
+
+A project key (`dsp_...`) opens exactly one DevShot Studio project. Create it in
+Studio under Share → Connect an AI client; it is shown once. Its tools take no VM
+name: DevShot resolves the project's current VM on every call, starts one when
+none runs (using a session pass), and never reaches other projects, other VMs or
+account settings.
+
+No local install is needed — the console hosts the MCP endpoint:
+
+```bash
+claude mcp add --transport http devshot https://console.devshot.com/api/mcp --header "Authorization: Bearer dsp_your_project_key"
+```
+
+This stdio server also accepts a project key in `DEVSHOT_API_KEY` and then
+exposes the same project tools: `project_status`, `start_vm`, `exec`,
+`read_file`, `write_file`.
+
 ## Configuration
 
-- `DEVSHOT_API_KEY`: required DevShot API key (`ds_...`)
+- `DEVSHOT_API_KEY`: required DevShot API key — an account key (`ds_...`) for the full API below, or a project key (`dsp_...`) for one Studio project
 - `DEVSHOT_API_URL`: optional DevShot console origin, defaults to `https://console.devshot.com`
 
 ## Run

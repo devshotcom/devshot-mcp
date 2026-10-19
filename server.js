@@ -3,10 +3,15 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { createDevshotClient } from './lib/devshot-client.js';
 import { createDevshotMcpServer } from './lib/devshot-mcp.js';
+import { createProjectMcpServer, isProjectKey } from './lib/project-mcp.js';
 
 try {
   const client = createDevshotClient();
-  const server = createDevshotMcpServer({ client });
+  // A project key (dsp_…) opens one Studio project; an account key (ds_…) the
+  // whole account API.
+  const server = isProjectKey(client.apiKey)
+    ? createProjectMcpServer({ client })
+    : createDevshotMcpServer({ client });
   const transport = new StdioServerTransport();
   await server.connect(transport);
 } catch (error) {
