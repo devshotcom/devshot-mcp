@@ -1,12 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DevshotApiError } from './lib/devshot-client.js';
-import { PROJECT_TOOL_NAMES, createProjectMcpServer, isProjectKey, registerProjectTools } from './lib/project-mcp.js';
-
-function makeServer() {
-  const tools = new Map();
-  return { tools, registerTool(name, schema, handler) { tools.set(name, { schema, handler }); } };
-}
+import { callProjectTool, createProjectMcpServer, isProjectKey, listProjectTools, projectForwarder } from './lib/project-mcp.js';
 
 test('a dsp_ key selects project mode; an account key does not', () => {
   assert.equal(isProjectKey(`dsp_${'a'.repeat(64)}`), true);
@@ -14,38 +9,44 @@ test('a dsp_ key selects project mode; an account key does not', () => {
   assert.equal(isProjectKey(undefined), false);
 });
 
-test('project mode exposes only project tools, none of which takes a VM', () => {
-  const server = makeServer();
-  registerProjectTools(server, { request: async () => ({}) });
-  assert.deepEqual([...server.tools.keys()], PROJECT_TOOL_NAMES);
-  for (const { schema } of server.tools.values()) {
-    assert.deepEqual(Object.keys(schema.inputSchema).filter((k) => /vm|server|project/i.test(k)), []);
-  }
+test('the tool list is the hosted endpoint\'s, so the bridge never lags behind it', async () => {
+  const calls = [];
+  const forward = projectForwarder({
+    request: async (path, init) => {
+      calls.push({ path, init });
+      return { jsonrpc: '2.0', id: init.body.id, result: { tools: [{ name: 'request_upload', inputSchema: { type: 'object' } }, { name: 'screenshot', inputSchema: { type: 'object' } }] } };
+    },
+  });
+  const { tools } = await listProjectTools(forward);
+  assert.deepEqual(tools.map((t) => t.name), ['request_upload', 'screenshot']);
+  assert.equal(calls[0].path, '/api/mcp');
+  assert.equal(calls[0].init.body.method, 'tools/list');
   assert.ok(createProjectMcpServer({ client: { request: async () => ({}) } }));
 });
 
-test('tools forward to the hosted project endpoint as tools/call', async () => {
-  const server = makeServer();
+test('tools forward to the hosted project endpoint as tools/call, image content included', async () => {
   const calls = [];
-  registerProjectTools(server, {
+  const forward = projectForwarder({
     request: async (path, init) => {
       calls.push({ path, init });
-      return { jsonrpc: '2.0', id: init.body.id, result: { content: [{ type: 'text', text: '{"output":"ok"}' }] } };
+      return { jsonrpc: '2.0', id: init.body.id, result: { content: [{ type: 'image', data: 'AAAA', mimeType: 'image/png' }, { type: 'text', text: '{"ok":true}' }] } };
     },
   });
-  const result = await server.tools.get('exec').handler({ command: 'pwd', timeout_seconds: undefined });
-  assert.deepEqual(result, { content: [{ type: 'text', text: '{"output":"ok"}' }] });
-  assert.equal(calls[0].path, '/api/mcp');
+  const result = await callProjectTool(forward, 'screenshot', { path: '/garten/' });
+  assert.deepEqual(result.content[0], { type: 'image', data: 'AAAA', mimeType: 'image/png' });
   assert.equal(calls[0].init.method, 'POST');
-  assert.deepEqual(calls[0].init.body.params, { name: 'exec', arguments: { command: 'pwd' } });
+  assert.deepEqual(calls[0].init.body.params, { name: 'screenshot', arguments: { path: '/garten/' } });
 });
 
-test('a refused key surfaces as a tool error', async () => {
-  const server = makeServer();
-  registerProjectTools(server, {
-    request: async () => { throw new DevshotApiError('This project key is invalid or was revoked.', { status: 401 }); },
+test('a refused key surfaces as a tool error with the endpoint\'s code and hint', async () => {
+  const forward = projectForwarder({
+    // What devshot-client throws for the endpoint's 401: the body's error object.
+    request: async () => { throw new DevshotApiError({ code: -32001 }, { status: 401, details: { jsonrpc: '2.0', id: null, error: { code: -32001, message: 'This project key expired after 7 days without use.', data: { code: 'KEY_EXPIRED', hint: 'Tell the user…', reconnect_url: 'https://devshot.com/studio?project=p' } } } }); },
   });
-  const result = await server.tools.get('project_status').handler({});
+  const result = await callProjectTool(forward, 'project_status', {});
   assert.equal(result.isError, true);
-  assert.match(result.content[0].text, /revoked/);
+  const body = JSON.parse(result.content[0].text);
+  assert.equal(body.code, 'KEY_EXPIRED');
+  assert.equal(body.reconnect_url, 'https://devshot.com/studio?project=p');
+  assert.match(body.message, /7 days/);
 });

@@ -6,12 +6,20 @@ Standalone repository: https://github.com/devshotcom/devshot-mcp
 
 ## Connect one Studio project (recommended)
 
-A project key (`dsp_...`) opens exactly one DevShot Studio project for the
-current Studio session. Studio fills it into Share → Connect an AI client; it
-stops working when that session ends. Its tools take no VM name: DevShot
-resolves the project's current VM on every call, starts it again within the
-session if it stopped, and never reaches other projects, other VMs or account
-settings.
+A project key (`dsp_...`) opens exactly one DevShot Studio project. Studio
+fills it into Share → Connect an AI client. It works until it is revoked and
+expires after 7 days without use; when the Studio session has ended, the next
+call that needs the VM opens a new one (using one session pass). Its tools take
+no VM name: DevShot resolves the project's current VM on every call, starts it
+when needed, and never reaches other projects, other VMs or account settings.
+
+Besides `exec`, `read_file` and `write_file`, the project tools upload local
+files without passing them through the model (`request_upload` + `curl -T`),
+download and unpack archives, list and search files, run background jobs,
+take screenshots of the app with console errors and broken images, send HTTP
+requests to it, back the workspace up, and — for Shopware — run `bin/console`,
+mint Admin API tokens and run Studio's own `shopware_check`. Clients that
+accept `text/event-stream` see `exec` output while it runs.
 
 No local install is needed — the console hosts the MCP endpoint:
 
@@ -20,9 +28,8 @@ claude mcp add --transport http devshot https://console.devshot.com/api/mcp --he
 ```
 
 This stdio server also accepts a project key in `DEVSHOT_API_KEY` and then
-exposes the same project tools: `project_status`, `start_vm`, `exec`,
-`read_file`, `write_file`, `set_internet` (owner keys only) and
-`command_reference`.
+exposes exactly the tools the hosted endpoint lists for that project (it
+forwards `tools/list` and `tools/call`).
 
 ## Configuration
 
