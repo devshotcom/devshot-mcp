@@ -33,7 +33,7 @@ forwards `tools/list` and `tools/call`).
 
 ## Configuration
 
-- `DEVSHOT_API_KEY`: required DevShot API key — an account key (`ds_...`) for the full API below, or a project key (`dsp_...`) for one Studio project
+- `DEVSHOT_API_KEY`: required bearer credential. Use a DevShot key (`ds_...`) for the account API, a project key (`dsp_...`) for one Studio project, or a Console account session access token for session-protected endpoints.
 - `DEVSHOT_API_URL`: optional DevShot console origin, defaults to `https://console.devshot.com`
 
 ## Run
@@ -115,3 +115,5 @@ The endpoint catalog is generated from the console API during the release sync w
 - `desktop_screenshot` — capture a PNG of a DevShot desktop VM and return it as base64.
 
 The direct tools cover the common server, VM, firewall, and security workflows. The generic `api_call` tool covers newer and specialized release functionality such as image bakery, pool base image selection, per-VM forwards, storage providers, workspaces, notes, files, secrets, tickets, audit logs, tunnel status, vnets, and terminal sessions.
+
+With a Console account session access token configured, call `api_call` with `{"method":"GET","path":"/api/ai/usage"}` to read the account's 30-day token totals per API key in `body.usage.apiKeys`. The response flags partial totals (`body.truncated`) and unavailable data (`body.usageError` or `body.apiKeyUsageError`). DevShot service keys cannot read this account-level report.
